@@ -1,0 +1,11 @@
+part 1
+filters out replays from noise in the PPseq output 
+part 2
+defines some key features of replay, pulls out some featurs that will be plotted later 
+including running linear regression to define warp and type label (sequential etc.)
+part 3
+adds sleep state scoring label to each event
+part 4
+across animals plots for broad features of replay
+part 5
+across animals plots for more complex features of replay 
