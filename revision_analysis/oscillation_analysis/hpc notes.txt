@@ -1,0 +1,11 @@
+
+
+srun -p cpu -t 2-22:00 -c 10 --pty --mem=30G bash
+
+module load miniconda
+
+conda activate lfp_preprocess
+
+cd code/
+
+python lfp_preprocess_hpc_version
