@@ -453,7 +453,7 @@ for overall_run_index, animal in enumerate(animals):
         else:
             a = path.split('/')[-2].split('_')[0]
         b = path.split('/')[-2][-1]
-        c = path.split('/')[-1].split('_')[0][-1]
+        c = path.split('\\')[-1].split('_')[0].split('g')[-1]
         current_mouse = '_'.join([a,b,c])
         if current_mouse != animal:
             continue
