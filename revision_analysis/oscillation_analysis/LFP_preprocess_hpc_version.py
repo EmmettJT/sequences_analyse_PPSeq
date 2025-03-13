@@ -181,7 +181,7 @@ def process_probe_channels(ProbeA_data,channels,channel_regions,current_mouse,ou
         if not os.path.exists(mouse_out_path):
             os.makedirs(mouse_out_path)
             
-        save_path = mouse_out_path + '/channel-' + str(chosen_channel) + '_REGION-' + channel_regions[ind_] + "_LFP_data.npy"
+        save_path = mouse_out_path + '//channel-' + str(chosen_channel) + '_REGION-' + channel_regions[ind_] + "_LFP_data.npy"
         np.save(save_path,data_downsampled)
         print('data saved for channel ' + str(chosen_channel))
 
@@ -272,15 +272,15 @@ def gather_paths_for_new_data(mir):
             raw_data_directory = base_recording_paths[index]
             print(raw_data_directory)
             OE_processor_path = find_folder_path(raw_data_directory, "continuous") 
-            Behav_data_path = full_organised_paths[index]+ r'/behav_sync/2_task/Preprocessed/'
+            Behav_data_path = full_organised_paths[index]+ r'//behav_sync/2_task/Preprocessed//'
 
-            Processed_Ephys_data_path_PROBEA = full_organised_paths[index]+ r'/ephys/' + r'probeA/kilosort4_output/sorter_output/'
-            if 'probeB' in os.listdir(full_organised_paths[index]+ r'/ephys/'):
+            Processed_Ephys_data_path_PROBEA = full_organised_paths[index]+ r'/ephys//' + r'probeA/kilosort4_output/sorter_output//'
+            if 'probeB' in os.listdir(full_organised_paths[index]+ r'/ephys//'):
                 print('Probe B found')
-                Processed_Ephys_data_path_PROBEB = full_organised_paths[index]+ r'/ephys/' + r'probeB/kilosort4_output/sorter_output/'
+                Processed_Ephys_data_path_PROBEB = full_organised_paths[index]+ r'/ephys//' + r'probeB/kilosort4_output/sorter_output//'
                 probeB = True
             
-            organised_ephys_path = full_organised_paths[index]+ r'/ephys/'
+            organised_ephys_path = full_organised_paths[index]+ r'/ephys//'
             
             for vid_file in os.listdir(full_organised_paths[index] + r'/video/videos/'):
                 if 'BACK' in vid_file:
@@ -288,13 +288,13 @@ def gather_paths_for_new_data(mir):
                         back_video_path = os.path.join(full_organised_paths[index] + r'/video/videos/',vid_file)
 
                     
-            if 'probeA' in os.listdir(full_organised_paths[index]+ r'/ephys/'):
-                if 'unit_info.txt' in os.listdir(full_organised_paths[index]+ r'/ephys/' + 'probeA'):
+            if 'probeA' in os.listdir(full_organised_paths[index]+ r'/ephys//'):
+                if 'unit_info.txt' in os.listdir(full_organised_paths[index]+ r'/ephys//' + 'probeA'):
                     if probeB: 
-                        if 'unit_info.txt' in os.listdir(full_organised_paths[index]+ r'/ephys/' + 'probeB'):
+                        if 'unit_info.txt' in os.listdir(full_organised_paths[index]+ r'/ephys//' + 'probeB'):
                             print('All good! Data is kilosorted for PROBE A and PROBE B ')
                             
-                            print(os.listdir(full_organised_paths[index]+ r'/ephys/'))
+                            print(os.listdir(full_organised_paths[index]+ r'/ephys//'))
                             print(raw_data_directory)
                             print(OE_processor_path)
                             print(Behav_data_path)
@@ -305,7 +305,7 @@ def gather_paths_for_new_data(mir):
                             print('PROBE B data not yet kilosorted, skip!')
                     else:
                         print('All good! Data is kilosorted for PROBE A')
-                        print(os.listdir(full_organised_paths[index]+ r'/ephys/'))
+                        print(os.listdir(full_organised_paths[index]+ r'/ephys//'))
                         print(raw_data_directory)
                         print(OE_processor_path)
                         print(Behav_data_path)
@@ -399,7 +399,7 @@ def channels_to_process(output_path,channels,current_mouse,str_var):
             process = True
         return process,to_process
     else:
-        process = True
+        process = True 
         to_process = channels
         return process,to_process
 
@@ -426,10 +426,10 @@ def channels_to_process(output_path,channels,current_mouse,str_var):
 # %%
 # define paths:
 
-# ## old data 
+## old data 
 # data_path = r'/ceph/sjones/projects/sequence_squad/organised_data/animals/'
 # animals  = ['136_1_3', '136_1_4', '149_1_1', '149_1_2', '149_1_3','178_1_4', '178_1_5', '178_1_6', '178_1_7', '178_1_8','178_1_9', '178_2_1', '178_2_2', '178_2_4', '268_1_10','269_1_4', '269_1_7', '270_1_5', '270_1_6','270_1_7']
-# ## done : , 
+## done : , 
 ## something wrong with '148_2_2','162_1_3',
 
 ## new data 
@@ -453,7 +453,7 @@ for overall_run_index, animal in enumerate(animals):
         else:
             a = path.split('/')[-2].split('_')[0]
         b = path.split('/')[-2][-1]
-        c = path.split('\\')[-1].split('_')[0].split('g')[-1]
+        c = path.split('/')[-1].split('_')[0].split('g')[-1]
         current_mouse = '_'.join([a,b,c])
         if current_mouse != animal:
             continue
@@ -572,7 +572,7 @@ for overall_run_index, animal in enumerate(animals):
                         total_chans = 400
                         plot_boundary(first_cortex_channel,total_chans)
                         print(first_cortex_channel)
-             
+                                            
             else:
                 if ProbeB:
                     implant_dfs_A,implant_dfs_B = find_histology_paths(current_mouse,ProbeB,shanks,overall_run_index)
@@ -620,5 +620,22 @@ for overall_run_index, animal in enumerate(animals):
             print(f'all data already processed for {current_mouse}')
                 
         
+
+                
+
+    
+    
+    
+
+
+# %%
+
+
+
+
+    
+
+# %%
+
 
 
