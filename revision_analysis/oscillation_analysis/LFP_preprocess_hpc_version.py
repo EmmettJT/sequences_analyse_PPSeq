@@ -503,18 +503,20 @@ for overall_run_index, animal in enumerate(animals):
                 if 'AP' in meta_data['channel_names'][0]:
                     probeA_data_index = index
         else:
+            stream_names = []
             for index, item in enumerate(os.listdir(processor_path)):   
                 meta_data = recording.continuous[index].metadata
-                if 'ProbeA-AP' in meta_data['stream_name']:
-                    probeA_data_index = index
-                    
-            #extract probe A
-            if 'ProbeB' in ''.join(os.listdir(processor_path)[0::]):
+                stream_names += [meta_data['stream_name']]
+
+            print(stream_names)
+            stream_names = np.array(stream_names)
+            if 'ProbeA-AP' in stream_names:
+                probeA_data_index = np.where(stream_names == 'ProbeA-AP')[0][0]
+            elif 'ProbeA' in stream_names:
+                probeA_data_index = np.where(stream_names == 'ProbeA')[0][0]
+            if 'ProbeB' in stream_names:
                 ProbeB = True
-                for index, item in enumerate(os.listdir(processor_path)):   
-                    meta_data = recording.continuous[index].metadata
-                    if 'ProbeB-AP' in meta_data['stream_name']:
-                        probeB_data_index = index
+                probeB_data_index = np.where(stream_names == 'ProbeB')[0][0]
                         
         ProbeA_data = recording.continuous[probeA_data_index].samples
         if ProbeB:
