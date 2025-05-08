@@ -8,4 +8,6 @@ conda activate lfp_preprocess
 
 cd code/
 
-python lfp_preprocess_hpc_version
+module unload miniconda
+
+python LFP_preprocess_hpc_version.py
