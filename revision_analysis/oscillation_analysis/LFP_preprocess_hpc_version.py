@@ -12,13 +12,14 @@ import glob
 from scipy.signal import butter, sosfilt, sosfilt_zi
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-    
-# Define the bandpass filter
-def create_bandpass_filter(lowcut, highcut, fs, order=4):
+import argparse
+
+
+# Define the lowpass filter
+def create_lowpass_filter(highcut, fs, order=4):
     nyquist = 0.5 * fs
-    low = lowcut / nyquist
     high = highcut / nyquist
-    sos = butter(order, [low, high], btype='band', output='sos')
+    sos = butter(order, high, btype='low', output='sos')
     return sos
     
 def list_all_datapaths(data_path):
@@ -140,16 +141,16 @@ def find_propotion_in_striatum(implant_df):
 
 
 def process_probe_channels(ProbeA_data,channels,channel_regions,current_mouse,output_path,var_string):
-    # pull out the data for each channel, bandpass to prevent aliasing then downsample
+    # pull out the data for each channel, lowpass to prevent aliasing (stops the high frequency stuff from folding back onto intself and poluting the low frequency range) then downsample
          
     # Parameters
-    lowcut = 20.0  # Lower cutoff frequency in Hz
-    highcut = 1250.0  # Upper cutoff frequency in Hz
+    highcut = 30  # Upper cutoff frequency in Hz
     fs = 30000.0  # Original sampling rate in Hz
     downsample_factor = 12  # Factor by which to downsample
     chunk_size = 2000  # Number of samples per chunk
     # Create the bandpass filter
-    sos = create_bandpass_filter(lowcut, highcut, fs)
+    sos = create_lowpass_filter(highcut, fs, order=4)
+    
     # Initialize the filter state
     zi = sosfilt_zi(sos)
 
@@ -321,7 +322,7 @@ def gather_paths_for_new_data(mir):
     return raw_data_directory, OE_processor_path
 
 
-def find_histology_paths(mouse_id,ProbeB,shanks,overall_run_index):
+def find_histology_paths(mouse_id,ProbeB,shank):
 
     # load the brainreg positions for the probe that was used in the recoridng (based on the manual labelling)
     brainreg_base_path = r"/ceph/sjones/projects/sequence_squad/revision_data/lars_recordings/serial_section/brainreg_output/brainreg/"
@@ -339,7 +340,6 @@ def find_histology_paths(mouse_id,ProbeB,shanks,overall_run_index):
         else:
             b_reg_path = None
             
-    shank = shanks[overall_run_index]
     if len([f for f in os.listdir(b_reg_path) if f'probeA_{shank}' in f and f.endswith('.csv')]) > 0:
         probeA_csv_files = [f for f in os.listdir(b_reg_path) if f'probeA_{shank}' in f and f.endswith('.csv')]
     else:
@@ -420,208 +420,232 @@ def channels_to_process(output_path,channels,current_mouse,str_var):
 
 # this will make it easier to load in the data for the actual analysis
 
-# %%
-# may need to move the new lars ephys data to make this work better 
+# %% [markdown]
+# # put all data into reference dataframe:
 
 # %%
-# define paths:
+expert_animals = ['136_1_3','136_1_4','149_1_1','178_1_4','178_1_5','178_1_6','178_1_7','178_1_8','178_1_9','178_2_1','178_2_2','178_2_3','178_2_4','269_1_1','269_1_2','269_1_3','269_1_4','269_1_7','270_1_3','270_1_5','270_1_6','SEQ006_1_8','SEQ006_1_9','SEQ006_1_10','SEQ006_1_11','SEQ008_1_3','SEQ007_1_4']
+expert_shanks = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,3,2,1,4,3,3]
 
-## old data 
-# data_path = r'/ceph/sjones/projects/sequence_squad/organised_data/animals/'
-# animals  = ['136_1_3', '136_1_4', '149_1_1', '149_1_2', '149_1_3','178_1_4', '178_1_5', '178_1_6', '178_1_7', '178_1_8','178_1_9', '178_2_1', '178_2_2', '178_2_4', '268_1_10','269_1_4', '269_1_7', '270_1_5', '270_1_6','270_1_7']
-## done : , 
-## something wrong with '148_2_2','162_1_3',
+learning_animals = ['256_1_1','255_1_1','255_1_2','255_1_4','262_1_1','262_1_2','262_1_4','262_1_5','262_1_6','AP5R_1_1','AP5R_1_2','AP5R_1_3','SEQ006_1_1','SEQ006_1_2','SEQ006_1_3','SEQ006_1_4','SEQ006_1_5','SEQ006_1_6','SEQ006_1_7','SEQ007_1_1','SEQ007_1_2','SEQ007_1_3']
+learning_shanks = [1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3]
 
-## new data 
-data_path = r'/ceph/sjones/projects/sequence_squad/revision_data/organised_data/animals/'
-animals = ['ap5R_1_1','ap5R_1_2','ap5R_1_3','seq006_1_1','seq006_1_2','seq006_1_3','seq006_1_4','seq006_1_5','seq006_1_6','seq006_1_7','seq006_1_8','seq006_1_9','seq006_1_10','seq006_1_11','seq008_1_3']
-shanks = [1,1,1,3,3,3,3,3,3,3,3,2,1,4,3]
+hlesion_animals = ['268_1_2','269_1_1','269_1_2','269_1_3','270_1_1','270_1_3']
+hlesion_shanks = [1,1,1,1,1,1]
 
 
-output_path = r"/ceph/sjones/projects/sequence_squad/revision_data/emmett_revisions/oscillations/"
+type_ = ['expert'] * len(expert_animals) + ['learning'] * len(learning_animals) + ['hlesion'] * len(hlesion_animals) 
+
+# make a dataframe to store the data in
+data_frame = pd.DataFrame({
+    'animal': expert_animals + learning_animals + hlesion_animals, 
+    'type': type_,
+    'shank': expert_shanks + learning_shanks + hlesion_shanks })
+
+# %%
+# deal with input arguments
+parser = argparse.ArgumentParser()
+parser.add_argument('--ID', type=int, required=True)
+args = parser.parse_args()
+current_run_id = args.ID
+print(f"Current run ID: {current_run_id}")
+
+
 replace_files = False
 
-# loop through all the animals
-for overall_run_index, animal in enumerate(animals):
+# extract the current run data from the dataframe
+row = data_frame.loc[current_run_id]
 
-    # list out all possible datapaths
-    data_paths = list_all_datapaths(data_path) 
+animal = row.animal
+shank = row.shank
+experiment_type = row.type
 
-    for path in data_paths:
+if not 'SEQ' in animal or 'AP5' in animal:
+    data_path = r'Z:\projects\sequence_squad\organised_data\animals\\'
+else:
+    data_path = r'/ceph/sjones/projects/sequence_squad/revision_data/organised_data/animals/'
+
+output_path = r"/ceph/sjones/projects/sequence_squad/revision_data/emmett_revisions/oscillations/"
+
+# list out all possible datapaths
+data_paths = list_all_datapaths(data_path) 
+
+for path in data_paths:
+    if 'EJT' in path:
+        a = path.split('/')[-2].split('_')[0][3::]
+    else:
+        a = path.split('/')[-2].split('_')[0]
+    b = path.split('/')[-2][-1]
+    c = path.split('/')[-1].split('_')[0].split('g')[-1]
+    current_mouse = '_'.join([a,b,c])
+    if current_mouse != animal:
+        continue
+    print('-------------------------------------')
+    print()
+    print(path)
+    organised_ephys_path = os.path.join(path, r'ephys/')
+    
+    # get the recording folder
+    mouse_folder = None
+    if 'EJT' in path:
+        OE_raw_path,processor_path = gather_paths_for_old_data(current_mouse,path)
+    else:
+        OE_raw_path, processor_path = gather_paths_for_new_data(current_mouse)
+        
+    # find processor tuples
+    main_processor_tuple,aux_processor_tuples = find_processor_tuples(processor_path)
+    
+    #!## LOAD in ephys data: WARNING V SLOW - this could take a few minutes ############!#
+    
+    recording = align_open_ephys_processors(main_processor_tuple,aux_processor_tuples,OE_raw_path)
+    recording.compute_global_timestamps()
+    
+    #!##################################################################################!#
+    
+    ## Save this out:
+    print('saving...')
+    if not os.path.isdir(organised_ephys_path):
+        os.makedirs(organised_ephys_path)
+        
+    # check to see if global object alreayd exists and if it does no need to save
+    if process_probe_data_bool(organised_ephys_path,aux_processor_tuples) == False:
+        save_path = organised_ephys_path + f"global-timstamps_event-df.pkl"
+        recording.events.to_pickle(save_path)
+    
+    ## Extract timestamp data:
+    events_df= recording.events
+
+    ## extract the main npx continuous data:
+    # work out the data ind
+    probeA_data_index = None
+    probeB_data_index = None
+    ProbeB = False
+    if 'EJT' in path:
+        for index, item in enumerate(os.listdir(processor_path)):
+            meta_data = recording.continuous[index].metadata
+            if 'AP' in meta_data['channel_names'][0]:
+                probeA_data_index = index
+    else:
+        stream_names = []
+        for index, item in enumerate(os.listdir(processor_path)):   
+            meta_data = recording.continuous[index].metadata
+            stream_names += [meta_data['stream_name']]
+
+        print(stream_names)
+        stream_names = np.array(stream_names)
+        if 'ProbeA-AP' in stream_names:
+            probeA_data_index = np.where(stream_names == 'ProbeA-AP')[0][0]
+        elif 'ProbeA' in stream_names:
+            probeA_data_index = np.where(stream_names == 'ProbeA')[0][0]
+        if 'ProbeB' in stream_names:
+            ProbeB = True
+            probeB_data_index = np.where(stream_names == 'ProbeB')[0][0]
+        
+    ProbeA_data = recording.continuous[probeA_data_index].samples
+    if ProbeB:
+        ProbeB_data = recording.continuous[probeB_data_index].samples
+        
+
+    #choose 8 channels 
+    channels = [50,90,130,170,210,250,290,340]
+    
+    # check if the data has alreay been processed
+    B_process = False
+    A_process = False
+    A_chans_to_process = []
+    B_chans_to_process = []
+    if not replace_files:
+        A_process,A_chans_to_process = channels_to_process(output_path,channels,current_mouse,'striatum_lfp/')
+        if ProbeB: 
+            B_process,B_chans_to_process = channels_to_process(output_path,channels,current_mouse,'hippocampus_lfp/')  
+    else:
+        A_chans_to_process = channels 
+        B_chans_to_process = channels
+        A_process = True
+        B_process = True   
+        
+    if B_process == True or A_process == True:
+        
+        # import the histology data
         if 'EJT' in path:
-            a = path.split('/')[-2].split('_')[0][3::]
-        else:
-            a = path.split('/')[-2].split('_')[0]
-        b = path.split('/')[-2][-1]
-        c = path.split('/')[-1].split('_')[0].split('g')[-1]
-        current_mouse = '_'.join([a,b,c])
-        if current_mouse != animal:
-            continue
-        print('-------------------------------------')
-        print()
-        print(path)
-        organised_ephys_path = os.path.join(path, r'ephys/')
-        
-        # get the recording folder
-        mouse_folder = None
-        if 'EJT' in path:
-            OE_raw_path,processor_path = gather_paths_for_old_data(current_mouse,path)
-        else:
-            OE_raw_path, processor_path = gather_paths_for_new_data(current_mouse)
-            
-        # find processor tuples
-        main_processor_tuple,aux_processor_tuples = find_processor_tuples(processor_path)
-        
-        #!## LOAD in ephys data: WARNING V SLOW - this could take a few minutes ############!#
-        
-        recording = align_open_ephys_processors(main_processor_tuple,aux_processor_tuples,OE_raw_path)
-        recording.compute_global_timestamps()
-        
-        #!##################################################################################!#
-        
-        ## Save this out:
-        print('saving...')
-        if not os.path.isdir(organised_ephys_path):
-            os.makedirs(organised_ephys_path)
-            
-        # check to see if global object alreayd exists and if it does no need to save
-        if process_probe_data_bool(organised_ephys_path,aux_processor_tuples) == False:
-            save_path = organised_ephys_path + f"global-timstamps_event-df.pkl"
-            recording.events.to_pickle(save_path)
-        
-        ## Extract timestamp data:
-        events_df= recording.events
+            brainreg_base_path = r"/ceph/sjones/projects/sequence_squad/data/histology/Neuropixel_tracks/"
+            for mouse_name in os.listdir(brainreg_base_path):
+                if current_mouse.split('_')[0] in mouse_name:
+                    hist_path_base = os.path.join(brainreg_base_path,mouse_name)
+                    hist_path = os.path.join((hist_path_base),"brainreg/")
+                    hist_path = glob.glob(os.path.join(hist_path, '**','tracks'),recursive = True)[0]
+                    # load the data
+                    implant_files = []
+                    for item in os.listdir(hist_path):
+                        if 'csv' in item:
+                            implant_files+=[item]
 
-        ## extract the main npx continuous data:
-        # work out the data ind
-        probeA_data_index = None
-        probeB_data_index = None
-        ProbeB = False
-        if 'EJT' in path:
-            for index, item in enumerate(os.listdir(processor_path)):
-                meta_data = recording.continuous[index].metadata
-                if 'AP' in meta_data['channel_names'][0]:
-                    probeA_data_index = index
+                    if len(implant_files) > 1:
+                        for file in implant_files:
+                            if current_mouse.split('_')[-2] in file:
+                                implant_file = file
+                    else:
+                        implant_file = implant_files[0]
+
+                    probe_track_file = os.path.join(hist_path,implant_file) 
+                    print(probe_track_file)
+                    implant_df = pd.read_csv(probe_track_file)
+                    
+                    # this is only needed for probe A:
+                    striatum_proportion = find_propotion_in_striatum(implant_df)
+                    # there should be 400 channels per 4000um (what i implanted), tot_channels = 384, bank_spacing = 20 # 20um, channels_per_bank = 2
+                    first_cortex_channel = int(striatum_proportion * 400)
+                    total_chans = 400
+                    plot_boundary(first_cortex_channel,total_chans)
+                    print(first_cortex_channel)
+                                        
         else:
-            stream_names = []
-            for index, item in enumerate(os.listdir(processor_path)):   
-                meta_data = recording.continuous[index].metadata
-                stream_names += [meta_data['stream_name']]
-
-            print(stream_names)
-            stream_names = np.array(stream_names)
-            if 'ProbeA-AP' in stream_names:
-                probeA_data_index = np.where(stream_names == 'ProbeA-AP')[0][0]
-            elif 'ProbeA' in stream_names:
-                probeA_data_index = np.where(stream_names == 'ProbeA')[0][0]
-            if 'ProbeB' in stream_names:
-                ProbeB = True
-                probeB_data_index = np.where(stream_names == 'ProbeB')[0][0]
-                        
-        ProbeA_data = recording.continuous[probeA_data_index].samples
-        if ProbeB:
-            ProbeB_data = recording.continuous[probeB_data_index].samples
-            
-        #choose 8 channels 
-        channels = [50,90,130,170,210,250,290,340]
-        
-        # check if the data has alreay been processed
-        B_process = False
-        A_process = False
-        A_chans_to_process = []
-        B_chans_to_process = []
-        if not replace_files:
-            A_process,A_chans_to_process = channels_to_process(output_path,channels,current_mouse,'striatum_lfp/')
-            if ProbeB: 
-                B_process,B_chans_to_process = channels_to_process(output_path,channels,current_mouse,'hippocampus_lfp/')  
-        else:
-            A_chans_to_process = channels 
-            B_chans_to_process = channels
-            A_process = True
-            B_process = True   
-            
-        if B_process == True or A_process == True:
-            
-            # import the histology data
-            if 'EJT' in path:
-                brainreg_base_path = r"/ceph/sjones/projects/sequence_squad/data/histology/Neuropixel_tracks/"
-                for mouse_name in os.listdir(brainreg_base_path):
-                    if current_mouse.split('_')[0] in mouse_name:
-                        hist_path_base = os.path.join(brainreg_base_path,mouse_name)
-                        hist_path = os.path.join((hist_path_base),"brainreg/")
-                        hist_path = glob.glob(os.path.join(hist_path, '**','tracks'),recursive = True)[0]
-                        # load the data
-                        implant_files = []
-                        for item in os.listdir(hist_path):
-                            if 'csv' in item:
-                                implant_files+=[item]
-
-                        if len(implant_files) > 1:
-                            for file in implant_files:
-                                if current_mouse.split('_')[-2] in file:
-                                    implant_file = file
-                        else:
-                            implant_file = implant_files[0]
-
-                        probe_track_file = os.path.join(hist_path,implant_file) 
-                        print(probe_track_file)
-                        implant_df = pd.read_csv(probe_track_file)
-                        
-                        # this is only needed for probe A:
-                        striatum_proportion = find_propotion_in_striatum(implant_df)
-                        # there should be 400 channels per 4000um (what i implanted), tot_channels = 384, bank_spacing = 20 # 20um, channels_per_bank = 2
-                        first_cortex_channel = int(striatum_proportion * 400)
-                        total_chans = 400
-                        plot_boundary(first_cortex_channel,total_chans)
-                        print(first_cortex_channel)
-                                            
+            if ProbeB:
+                implant_dfs_A,implant_dfs_B = find_histology_paths(current_mouse,ProbeB,shank)
             else:
-                if ProbeB:
-                    implant_dfs_A,implant_dfs_B = find_histology_paths(current_mouse,ProbeB,shanks,overall_run_index)
-                else:
-                    implant_dfs_A = find_histology_paths(current_mouse,ProbeB,shanks,overall_run_index)
-                first_cortex_channel,total_chans = find_propotion_new_data(implant_dfs_A[0])
-                plot_boundary(first_cortex_channel,total_chans)
-            
-            if A_process:
-                #label the channels   
-                channel_regions = []
-                for channel in A_chans_to_process:
-                    if channel >= first_cortex_channel:
-                        channel_regions.append('m_crtex')
-                    elif channel < first_cortex_channel:
-                        channel_regions.append('striatum')
-                # process the data for probe A
-                process_probe_channels(ProbeA_data,A_chans_to_process,channel_regions,current_mouse,output_path,'striatum_lfp/')
-                
-                # save out the timestamp data
-                Fs = 30000
-                samples = len(ProbeA_data)
-                timestamps_index = np.linspace(0,samples,samples+1).astype(int)
-                timestamps_index_downsampled = timestamps_index[::12]
-                timestamps_downsampled = timestamps_index_downsampled/Fs
-                downsampled_timstamp_df = pd.DataFrame({'sample_number':timestamps_index_downsampled,'ephys_timestamp':timestamps_downsampled})
-                mouse_out_path = os.path.join(output_path, 'striatum_lfp/') + current_mouse + '/'
-                downsampled_timstamp_df.to_csv(mouse_out_path + 'probeA_timestamps.csv')
-                
-            # same for probe B
-            if B_process:
-                #label the channels for probe B  
-                probeB_channel_regions = ['hippocampus'] * len(B_chans_to_process)
-                process_probe_channels(ProbeB_data,B_chans_to_process,probeB_channel_regions,current_mouse,output_path,'hippocampus_lfp/')
-                
-                # save out timestamp data 
-                samples = len(ProbeB_data)
-                timestamps_index = np.linspace(0,samples,samples+1).astype(int)
-                timestamps_index_downsampled = timestamps_index[::12]
-                timestamps_downsampled = timestamps_index_downsampled/Fs
-                downsampled_timstamp_df = pd.DataFrame({'sample_number':timestamps_index_downsampled,'ephys_timestamp':timestamps_downsampled})
-                mouse_out_path = os.path.join(output_path, 'hippocampus_lfp/') + current_mouse + '/'
-                downsampled_timstamp_df.to_csv(mouse_out_path + 'probeB_timestamps.csv')
-        else:
-            print(f'all data already processed for {current_mouse}')
-                
+                implant_dfs_A = find_histology_paths(current_mouse,ProbeB,shank)
+            first_cortex_channel,total_chans = find_propotion_new_data(implant_dfs_A[0])
+            plot_boundary(first_cortex_channel,total_chans)
         
+        if A_process:
+            #label the channels   
+            channel_regions = []
+            for channel in A_chans_to_process:
+                if channel >= first_cortex_channel:
+                    channel_regions.append('m_crtex')
+                elif channel < first_cortex_channel:
+                    channel_regions.append('striatum')
+            # process the data for probe A
+            process_probe_channels(ProbeA_data,A_chans_to_process,channel_regions,current_mouse,output_path,'striatum_lfp/')
+            
+            # save out the timestamp data
+            Fs = 30000
+            samples = len(ProbeA_data)
+            timestamps_index = np.linspace(0,samples,samples+1).astype(int)
+            timestamps_index_downsampled = timestamps_index[::12]
+            timestamps_downsampled = timestamps_index_downsampled/Fs
+            downsampled_timstamp_df = pd.DataFrame({'sample_number':timestamps_index_downsampled,'ephys_timestamp':timestamps_downsampled})
+            mouse_out_path = os.path.join(output_path, 'striatum_lfp',experiment_type,current_mouse) + r'/'
+            downsampled_timstamp_df.to_csv(mouse_out_path + 'probeA_timestamps.csv')
+            
+        # same for probe B
+        if B_process:
+            #label the channels for probe B  
+            probeB_channel_regions = ['hippocampus'] * len(B_chans_to_process)
+            process_probe_channels(ProbeB_data,B_chans_to_process,probeB_channel_regions,current_mouse,output_path,'hippocampus_lfp/')
+            
+            # save out timestamp data 
+            samples = len(ProbeB_data)
+            timestamps_index = np.linspace(0,samples,samples+1).astype(int)
+            timestamps_index_downsampled = timestamps_index[::12]
+            timestamps_downsampled = timestamps_index_downsampled/Fs
+            downsampled_timstamp_df = pd.DataFrame({'sample_number':timestamps_index_downsampled,'ephys_timestamp':timestamps_downsampled})
+            mouse_out_path = os.path.join(output_path, 'hippocampus_lfp', experiment_type, current_mouse) + r'/'
+            downsampled_timstamp_df.to_csv(mouse_out_path + 'probeB_timestamps.csv')
+    else:
+        print(f'all data already processed for {current_mouse}')
+            
+    
 
                 
 
@@ -629,13 +653,6 @@ for overall_run_index, animal in enumerate(animals):
     
     
 
-
-# %%
-
-
-
-
-    
 
 # %%
 

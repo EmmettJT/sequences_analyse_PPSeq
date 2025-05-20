@@ -6,8 +6,8 @@ module load miniconda
 
 conda activate lfp_preprocess
 
-cd code/
+cd code/LFP
 
 module unload miniconda
 
-python LFP_preprocess_hpc_version.py
+execute slurm 
