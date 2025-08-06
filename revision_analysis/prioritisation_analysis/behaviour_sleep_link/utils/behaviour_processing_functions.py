@@ -845,61 +845,6 @@ def shift_curve_start(resampled_curve, p5, radius=45):
 
 ### speed calculation functions
 
-def calculate_speed(trajectory, _1mm, fps):
-    """
-    Calculate the speed for a single trajectory.
-    
-    Parameters:
-    - trajectory: List of tuples or arrays containing x, y coordinates [(x1, y1), (x2, y2), ...]
-    - _1mm: Distance represented by 1mm in the coordinates
-    - fps: Frames per second (tracking rate)
-    
-    Returns:
-    - speed: The average speed for the trajectory (distance/time)
-    """
-    total_distance = 0
-    total_time = 0
-    
-    # Calculate the total distance and total time
-    for i in range(1, len(trajectory)):
-        x1, y1 = trajectory[i - 1]
-        x2, y2 = trajectory[i]
-        
-        # Euclidean distance between two consecutive points
-        distance_mm = (np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)) / _1mm
-        time = 1 / fps  # Time between frames (1/fps)
-        
-        total_distance += distance_mm
-        total_time += time
-    
-    # Average speed: total distance / total time
-    speed = total_distance / total_time if total_time != 0 else 0
-    return speed
-
-def calculate_speed_variability(trajectories, _1mm, fps):
-    """
-    Calculate the speed variability (standard deviation) between different trajectories.
-    
-    Parameters:
-    - trajectories: List of trajectories, where each trajectory is a list of (x, y) coordinates
-    - _1mm: Distance represented by 1mm in the coordinates
-    - fps: Frames per second (tracking rate)
-    
-    Returns:
-    - speed_std: Standard deviation of speeds across all trajectories
-    """
-    speeds = []
-    
-    # Calculate speed for each trajectory
-    for trajectory in trajectories:
-        speed = calculate_speed(trajectory, _1mm, fps)
-        speeds.append(speed)
-    
-    # Calculate the standard deviation of speeds
-    speed_std = np.std(speeds)
-    speed_mean = np.mean(speeds)
-    
-    return speed_std,speed_mean
 
 
 
