@@ -261,7 +261,7 @@ def get_tracking_data_EJT_data(full_org_dat_path):
         if 'task' in item:
             full_track_path = os.path.join(track_path,item)
     for tracking_file in os.listdir(full_track_path):
-        if 'back' in tracking_file and 'task' in tracking_file and '.h5' in tracking_file:
+        if 'back' in tracking_file and 'task' in tracking_file and '.h5' in tracking_file and not 'port' in tracking_file:
             task_tracking_csv = os.path.join(full_track_path,tracking_file)
             break
     for tracking_file in os.listdir(full_track_path):
