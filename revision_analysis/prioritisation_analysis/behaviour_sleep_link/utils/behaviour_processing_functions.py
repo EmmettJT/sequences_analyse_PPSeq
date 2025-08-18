@@ -1007,39 +1007,6 @@ def centroid_distance(window, template):
     centroid_template = np.mean(template, axis=0)
     return euclidean(centroid_window, centroid_template)
 
-def find_similar_segments(tracking, template, threshold, centroid_thresh=3, radius=3):
-    """
-    Find similar segments with centroid pre-filtering.
-    
-    Parameters:
-        tracking: Nx2 array of (x,y) points.
-        template: Mx2 array of template (x,y) points.
-        threshold: DTW distance threshold.
-        centroid_thresh: Pre-filter threshold on centroid distance.
-        radius: DTW radius for fastdtw.
-    
-    Returns:
-        List of matching segment indices.
-    """
-    tracking = np.array(tracking)
-    template = np.array(template)
-    M = len(template)
-    matches = []
-
-    for start in tqdm(range(len(tracking) - M + 1), desc="Processing segments"):
-        window = tracking[start : start + M]
-
-        # Pre-filter: Check centroid distance first
-        if centroid_distance(window, template) > centroid_thresh:
-            continue  # Skip if centroids are too far apart
-
-        # Run DTW only if centroid distance is low
-        distance, _ = fastdtw(window, template, radius=radius, dist=euclidean)
-        if distance < threshold:
-            matches.append((start, start + M))
-
-    return matches
-
 
 def find_closest_to_centroid(tracking_, centroid, num_points=100):
     """
