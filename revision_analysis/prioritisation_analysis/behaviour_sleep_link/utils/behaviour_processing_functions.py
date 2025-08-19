@@ -760,19 +760,29 @@ def find_closest_points(curve1, curve2, cut):
     min_idx = np.unravel_index(np.argmin(dist_matrix), dist_matrix.shape)
     return curve1[min_idx[0]], curve2[min_idx[1]]
 
-def join_curves(curve1, curve2, cut = True):
-    """Join two curves at the closest points if they touch, otherwise join endpoints."""
+def join_curves(curve1, curve2, cut=True, overlap_thresh=0.1):
+    """
+    Join two curves at the closest points if they touch near endpoints (within first/last 20%).
+    Otherwise, join endpoints.
+    """
     point1, point2 = find_closest_points(curve1, curve2, cut)
-    
-    if np.linalg.norm(np.array(point1) - np.array(point2)) < 2:  # Assuming touching if distance < small epsilon
-        # Directly connect at closest point
-        print('overlap detected')
+
+    # distance check (touching if close enough)
+    if np.linalg.norm(np.array(point1) - np.array(point2)) < 2:
         index1 = curve1.index(point1.tolist())
         index2 = curve2.index(point2.tolist())
-        return curve1[:index1+1] + curve2[index2:]
-    else:
-        # Join by endpoints
-        return curve1 + curve2
+
+        # Check if the overlap point is near start or end of curve1
+        near_end_curve1 = (index1 <= len(curve1) * overlap_thresh) or (index1 >= len(curve1) * (1 - overlap_thresh))
+        # Same for curve2
+        near_end_curve2 = (index2 <= len(curve2) * overlap_thresh) or (index2 >= len(curve2) * (1 - overlap_thresh))
+
+        if near_end_curve1 or near_end_curve2:
+            print("Overlap detected near curve ends")
+            return curve1[:index1+1] + curve2[index2:]
+    
+    # Default: just concatenate fully
+    return curve1 + curve2
     
 def join_make_full_circle(curve1, cut = False):
     """Join two curves at the closest points if they touch, otherwise join endpoints."""
