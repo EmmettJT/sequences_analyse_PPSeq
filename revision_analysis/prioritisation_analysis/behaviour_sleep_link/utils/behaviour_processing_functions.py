@@ -711,7 +711,19 @@ def find_task_relevant_tracking_points(back_head_centre_df,p1,p2,p3,p4,p5,radius
         port_positions += [[np.median(port.interped_x),np.median(port.interped_y)]]
         
     port_centroids = port_positions
-        
+    
+    ############################################
+    # fix port centroid 1 if it is missing: 
+    port_centroids_fixed= []
+    for i, item in enumerate(port_centroids):
+        if sum(item) < 10:
+            if i == 0:
+                port_centroids_fixed += [[port_centroids[2][0],port_centroids[1][1]]]
+        else:
+            port_centroids_fixed += [item]
+    port_centroids = port_centroids_fixed
+    #####################################################
+    
     coords = []
     for ind_,item in enumerate(current_x):
         coords += [[item,current_y[ind_]]]
@@ -1047,6 +1059,8 @@ def process_and_validate_trajectories(tracking, matches, template,add_amount,fra
     for start, end in matches:
         # Step 1: Extend the trajectory
         start = start - add_amount
+        if start < 0:
+            start = 0
         end = end + add_amount
         extended_trajectory = tracking[start:end]
         # Step 2: Find closest points to the start and end centroids in teh first and l;ast 30% of the trajectory
