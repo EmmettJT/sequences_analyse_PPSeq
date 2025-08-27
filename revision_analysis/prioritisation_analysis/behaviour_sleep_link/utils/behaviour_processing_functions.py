@@ -107,7 +107,7 @@ def find_awake_ppseq_base_path(mir,awake_ppseq_path):
         return(os.path.join(awake_ppseq_path,awake_file_mir))
     
 def get_sequence_regions(mir,awake_ppseq_base_path,sequence_order):
-    standard_space_path = awake_ppseq_base_path + r'//analysis_output/reordered_recolored/fixed_standard_space//'
+    standard_space_path = awake_ppseq_base_path + r'/analysis_output/reordered_recolored/fixed_standard_space/'
     overlap_positions_standard_space = np.load(standard_space_path + 'overlap_positions_standard_space.npy',allow_pickle=True)
 
     mir_row = None
@@ -435,7 +435,7 @@ def process_camera_data(Camera_ts_raw):
     result = np.max(Camera_trig_states) == np.min(Camera_trig_states)
     
     # #pull out video name
-    # video_name = [TimeStampPath.split("\\")[-1].split(".")[0] + '-camera-timestamp-data']
+    # video_name = [TimeStampPath.split("//")[-1].split(".")[0] + '-camera-timestamp-data']
 
     if not result:
 
